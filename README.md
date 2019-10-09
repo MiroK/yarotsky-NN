@@ -15,3 +15,5 @@ optimize and share weights.
 Each of these networks should finally be implemented in tensor flow and the
 weights learned by training. The ultimate question is whether the Yaratosky
 net can be beaten / how close to it can we get by training (or manually).
+
+# TODO

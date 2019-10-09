@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
 
     plt.figure()
-    plt.plot(x, sawtooth(x, 4))
+    plt.plot(x, x2_approx(x, 2))
     plt.show()
 
 

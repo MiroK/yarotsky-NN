@@ -78,69 +78,56 @@ def saw_tooth(x, s):
     return A2.dot(y1) + b2
     
 
-def x2_approx_noskip(x, m):
-    '''Yarotsky's neural net as Feed Forward Neural Net'''
+def x2_approx_skip(x, m):
+    '''Yarotsky's neural net (with skip connections)'''
     assert m >= 1
 
-    # The idea here is that output of each gs is propagated through
-    # the next layers as identity
-    # To get composition (ie next gs)
+    # Composition
     Ac = np.array([[2, -4, 2],
-                  [2, -4, 2],
-                  [2, -4, 2]])
+                   [2, -4, 2],
+                   [2, -4, 2]])
     bc = np.array([[0, -0.5, -1]]).T
 
-    # To get output of gs
-    Ag = np.array([[2, -4, 2],
-                   [-2, 4, -2]])
-    bg = np.array([[1, -1]]).T
+    # Narrowing for finalizing gs
+    Ag = np.array([[2, -4, 2]])
+    bg = np.array([[0]])
 
-    # Propagating identity
-    Ai = np.array([[1, -1],
-                   [-1, 1]])
-    bi = np.array([[0, 0]]).T
-    
     # x is a scalar
     # The initial layer consist of id(x) and g(x)
-    A1 = np.array([[1, -1, 1, 1, 1]]).T
-    b1 = np.array([[0, 0, 0, -0.5, -1]]).T
+    A1 = np.array([[1, 1, 1]]).T
+    b1 = np.array([[0, -0.5, -1]]).T
     y1 = A1.dot(x) + b1
-
     y1 = relu(y1)
 
-    y_next = np.array
-    # I don't build one by matrix here for the mapping. Instead, use
-    # its block structure and build the layer by component
-    while m > 1:
-        m -= 1
-        # x by identity
+    # This layer connects x with results of finished gs composition 
+    y_out = np.zeros((m+1, 1))
+    y_out[0] = x
+    for s in range(1, m+1):
+        # Get the sawtooth for this layer
+        y_out[s] = Ag.dot(y1) + bg  # This would be the skip connection
+        # Compose for the next one
+        y1 = Ac.dot(y1) + bc
+        y1 = relu(y1)
         
-        # previous g_s by identity
-
-        # next g_x
-
-    # In the final layer we want to collapse final g_s and then
-    # do the sum of results 
-    print m
-    # Collapsing the sum x - ...
-    A = np.r_[1, -1,  # Collapse identity
-              #-1./np.array([2**(2*s) for s in range(1, m)]),
-              #1./np.array([2**(2*s) for s in range(1, m)]),
-              -np.array([2., -4., 2.])/4]
-    print A, y1
-    return A.dot(y1)
+    # Weights for collapsing concatenated to scalar
+    A = np.array([np.r_[1., -1./(2.**(2*np.arange(1, m+1)))]])
+    b = np.array([[0]])
+    
+    return A.dot(y_out) + b 
     
 # --------------------------------------------------------------------
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    from yarotsky import x2_approx
 
+    m = 5
+    x = np.linspace(0, 1, 101)
+    y = np.array([x2_approx_skip(xi, m) for xi in x]).flatten()
+    y0 = np.array([x2_approx(xi, m) for xi in x]).flatten()
 
-    # print x2_approx_noskip(x=0.2, m=2)
+    print np.linalg.norm(y - y0, np.inf)
     
-    x = np.linspace(0, 1, 10001)
-    y = np.array([x2_approx_noskip(xi, 2) for xi in x]).flatten()
-
     plt.figure()
     plt.plot(x, y)
     plt.show()
