@@ -17,3 +17,8 @@ weights learned by training. The ultimate question is whether the Yaratosky
 net can be beaten / how close to it can we get by training (or manually).
 
 # TODO
+- [ ] in `tooth.py` implement `x2_approx_noskip`, i.e. as fully connected NN
+- [ ] implement "tooth" architecture with tensorflow and fix weights
+- [ ] implement `x2_approx_*` architectures in tensorflow and fix weights
+- [ ] implement `x2_approx_skip` architecture with weight sharing
+- [ ] train the tensorflow networks
