@@ -54,26 +54,11 @@ def x2_approx_skip(x, m):
     
     y = tf.add(tf.matmul(y, A), b)
 
-    return y, params 
+    return y, params
 
-# --------------------------------------------------------------------
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    m = 12
-    
-    def predict(sess, NN, x, x_values):
-        y_ = [sess.run(NN, feed_dict={x: np.array([[xi]])}) for xi in x_values]
-        return np.array(y_).flatten()
-
-    x = tf.placeholder(tf.float32, [None, 1])
-    NN, params = x2_approx_skip(x, m=m)
-
-    # Before starting, initialize the variables
-    init = tf.initialize_all_variables()
-
+def yarotsky_net_init(m, sess, params):
+    '''Set networks weights in this session to run like Yarotsky'''
     # Composition
     A = np.array([[2, -4, 2],
                   [2, -4, 2],
@@ -84,30 +69,47 @@ if __name__ == '__main__':
     Ag = np.array([[2, -4, 2]]).T
     bg = np.array([0])
 
+    # For first layer
+    sess.run(params['A0'].assign(np.array([[1., 1., 1.]])))
+    sess.run(params['b0'].assign(np.array([0, -0.5, -1.])))
+
+    # Intermerdiate
+    for i in range(1, m+1):
+        sess.run(params['Ac%d' % i].assign(Ag))
+        sess.run(params['bc%d' % i].assign(bg))
+
+    for i in range(1, m):
+        sess.run(params['A%d' % i].assign(A))
+        sess.run(params['b%d' % i].assign(b))
+
+    # Collapse last
+    Aout = np.array([np.r_[1., -1./(2.**(2*np.arange(1, m+1)))]]).T
+    bout = np.array([0])
+
+    sess.run(params['Aout'].assign(Aout))
+    sess.run(params['bout'].assign(bout))
+
+# --------------------------------------------------------------------
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    from common import predict
+    import numpy as np
+
+    m = 12
+    
+    x = tf.placeholder(tf.float32, [None, 1])
+    NN, params = x2_approx_skip(x, m=m)
+
+    # Before starting, initialize the variables
+    init = tf.initialize_all_variables()
+
+
     # Launch the graph.
     with tf.Session() as sess:
         sess.run(init)
-        # Set the variables as in numpy
-        # For first layer
-        sess.run(params['A0'].assign(np.array([[1., 1., 1.]])))
-        sess.run(params['b0'].assign(np.array([0, -0.5, -1.])))
 
-        # Intermerdiate
-        for i in range(1, m+1):
-            sess.run(params['Ac%d' % i].assign(Ag))
-            sess.run(params['bc%d' % i].assign(bg))
-
-        for i in range(1, m):
-            sess.run(params['A%d' % i].assign(A))
-            sess.run(params['b%d' % i].assign(b))
-
-        # Collapse last
-        Aout = np.array([np.r_[1., -1./(2.**(2*np.arange(1, m+1)))]]).T
-        bout = np.array([0])
-
-        sess.run(params['Aout'].assign(Aout))
-        sess.run(params['bout'].assign(bout))
-
+        yarotsky_net_init(m, sess, params)
         #for w in tf.trainable_variables():
         #    print sess.run(w)
         

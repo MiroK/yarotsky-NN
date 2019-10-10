@@ -10,6 +10,9 @@ def tooth(x):
     in -r- out
        \r/
     '''
+    if not isinstance(x, (float, int)):
+        return np.array([map(tooth, x)]).flatten()
+    
     # x is a scalar
     # Inputs to first layer are
     A1 = np.array([[1, 1, 1]]).T
@@ -28,6 +31,10 @@ def tooth(x):
 def identity(x, nlayers):
     '''Deep relu NN that is the identity'''
     assert nlayers >= 1
+
+    if not isinstance(x, (float, int)):
+        return np.array([identity(xi, nlayers) for xi in x]).flatten()
+    
     A1 = np.array([[1, -1]]).T
     b1 = np.array([[0, 0]]).T
     y1 = A1.dot(x) + b1
@@ -52,7 +59,10 @@ def identity(x, nlayers):
 def saw_tooth(x, s):
     '''Deep relu NN that is saw tooth function'''
     assert s >= 1
-    
+
+    if not isinstance(x, (float, int)):
+        return np.array([saw_tooth(xi, s) for xi in x]).flatten()
+
     # x is a scalar
     # Inputs to first layer are
     A1 = np.array([[1, 1, 1]]).T
@@ -81,6 +91,9 @@ def saw_tooth(x, s):
 def x2_approx_skip(x, m):
     '''Yarotsky's neural net (with skip connections)'''
     assert m >= 1
+    
+    if not isinstance(x, (float, int)):
+        return np.array([x2_approx_skip(xi, m) for xi in x]).flatten()
 
     # Composition
     Ac = np.array([[2, -4, 2],
@@ -123,11 +136,11 @@ if __name__ == '__main__':
 
     m = 5
     x = np.linspace(0, 1, 101)
-    y = np.array([x2_approx_skip(xi, m) for xi in x]).flatten()
-    y0 = np.array([x2_approx(xi, m) for xi in x]).flatten()
+    y = x2_approx_skip(x, m)
+    y0 = x2_approx(x, m)
 
     print np.linalg.norm(y - y0, np.inf)
     
     plt.figure()
-    plt.plot(x, y)
+    plt.plot(x, y0)
     plt.show()

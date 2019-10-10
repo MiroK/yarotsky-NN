@@ -21,12 +21,9 @@ def tooth(x):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    from common import predict
     import numpy as np
     
-    def predict(sess, NN, x, x_values):
-        y_ = [sess.run(NN, feed_dict={x: np.array([[xi]])}) for xi in x_values]
-        return np.array(y_).flatten()
-
     x = tf.placeholder(tf.float32, [None, 1])
     NN, params = tooth(x)
 
