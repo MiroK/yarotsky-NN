@@ -1,5 +1,4 @@
 import tensorflow as tf
-import itertools
 
 
 def saw_tooth(x, m):
