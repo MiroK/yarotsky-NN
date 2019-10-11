@@ -4,8 +4,8 @@ import tensorflow as tf
 def x2_approx_skip(x, m):
     '''Skip connection, no weight sharing'''
     # Input to first layer
-    A0 = tf.Variable(tf.truncated_normal(shape=[1, 3], stddev=0.1))
-    b0 = tf.Variable(tf.constant(0.1, shape=[3]))
+    A0 = tf.Variable(tf.truncated_normal(shape=[1, 3], stddev=0.1, dtype=tf.float64))
+    b0 = tf.Variable(tf.constant(0.1, shape=[3], dtype=tf.float64))
 
     params = {'A0': A0, 'b0': b0}
 
@@ -15,8 +15,8 @@ def x2_approx_skip(x, m):
     gs = []
     for s in range(1, m):
         # Collapse y1 to get gs
-        A = tf.Variable(tf.truncated_normal(shape=[3, 1], stddev=0.1))
-        b = tf.Variable(tf.constant(0.1, shape=[1]))
+        A = tf.Variable(tf.truncated_normal(shape=[3, 1], stddev=0.1, dtype=tf.float64))
+        b = tf.Variable(tf.constant(0.1, shape=[1], dtype=tf.float64))
         # Record
         params['Ac%d' % s] = A
         params['bc%d' % s] = b
@@ -24,8 +24,9 @@ def x2_approx_skip(x, m):
         gs.append(tf.add(tf.matmul(y1, A), b))
                   
         # Make composition
-        A = tf.Variable(tf.truncated_normal(shape=[3, 3], stddev=0.1))
-        b = tf.Variable(tf.constant(0.1, shape=[3]))
+        A = tf.Variable(tf.truncated_normal(shape=[3, 3], stddev=0.1, dtype=tf.float64))
+        b = tf.Variable(tf.constant(0.1, shape=[3], dtype=tf.float64))
+
         # Record
         params['A%d' % s] = A
         params['b%d' % s] = b
@@ -34,8 +35,8 @@ def x2_approx_skip(x, m):
         y1 = tf.nn.relu(y1)
         
     # Collapse y1 to get gs
-    A = tf.Variable(tf.truncated_normal(shape=[3, 1], stddev=0.1))
-    b = tf.Variable(tf.constant(0.1, shape=[1]))
+    A = tf.Variable(tf.truncated_normal(shape=[3, 1], stddev=0.1, dtype=tf.float64))
+    b = tf.Variable(tf.constant(0.1, shape=[1], dtype=tf.float64))
     # Record
     params['Ac%d' % m] = A
     params['bc%d' % m] = b
@@ -46,8 +47,8 @@ def x2_approx_skip(x, m):
     y = tf.concat([x] + gs, axis=1)
 
     # And the last layer
-    A = tf.Variable(tf.truncated_normal(shape=[1+len(gs), 1], stddev=0.1))
-    b = tf.Variable(tf.constant(0.1, shape=[1]))
+    A = tf.Variable(tf.truncated_normal(shape=[1+len(gs), 1], stddev=0.1, dtype=tf.float64))
+    b = tf.Variable(tf.constant(0.1, shape=[1], dtype=tf.float64))
     # Record
     params['Aout'] = A
     params['bout'] = b
@@ -60,7 +61,7 @@ def x2_approx_skip(x, m):
 def yarotsky_net_init(m, sess, params):
     '''Set networks weights in this session to run like Yarotsky'''
     # Composition
-    A = np.array([[2, -4, 2],
+    A = np.array([[2., -4, 2],
                   [2, -4, 2],
                   [2, -4, 2]]).T
     b = np.array([0, -0.5, -1])
@@ -93,12 +94,13 @@ def yarotsky_net_init(m, sess, params):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    from tooth import x2_approx_skip as Yaro
     from common import predict
     import numpy as np
 
-    m = 12
+    m = 4
     
-    x = tf.placeholder(tf.float32, [None, 1])
+    x = tf.placeholder(tf.float64, [None, 1])
     NN, params = x2_approx_skip(x, m=m)
 
     # Before starting, initialize the variables
@@ -117,7 +119,13 @@ if __name__ == '__main__':
         print 'Number of weights', weight_count
         
         unit_interval = np.linspace(0, 1, 1001)
-    
+
+        print m
+        yL = predict(sess, NN, x, unit_interval)
+        yY = Yaro(unit_interval, m)
+        print np.linalg.norm(yL - yY, np.inf)
+        
         plt.figure()
-        plt.plot(unit_interval, predict(sess, NN, x, unit_interval))            
+        plt.plot(unit_interval, yL)
+        plt.plot(unit_interval, yY)
         plt.show()

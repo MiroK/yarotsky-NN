@@ -1,13 +1,13 @@
 import matplotlib.pyplot as plt
-
-from tf_fm_noskip_noshare import x2_approx_skip as get_NN
+from tf_fm_skip_noshare import x2_approx_skip as get_noshare_NN
+from tf_fm_skip_share import x2_approx_skip as get_share_NN
 from tooth import x2_approx_skip as Yaro
 from common import train, sup_norm
 from functools import partial
 import tensorflow as tf
 import numpy as np
 from mpi4py import MPI
-import argparse
+import argparse, os
 
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -15,11 +15,13 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 # Which (template) preconitioner to use
 parser.add_argument('-m', type=int, default=1, help='m in f_m approx')
 parser.add_argument('-nnets', type=int, default=10, help='Total of nets to train')
-args, _ = parser.parse_known_args()
+parser.add_argument('-architecture', type=str, default='share', choices=['share', 'noshare'])
+args = parser.parse_args()
 
+# --------------------------------------------------------------------
 
 m = args.m
-
+get_NN = {'share': get_share_NN, 'noshare': get_noshare_NN}[args.architecture]
 # Bound nets to m
 Yaro_m = partial(Yaro, m=m)
 NN_m = partial(get_NN, m=m)
@@ -37,7 +39,7 @@ local_errors = []
 for i in range(nlocal_jobs):
     with tf.Session() as session:
         # Get back the trained net
-        NN = train(session, NN_m, verbose=False)
+        NN = train(session, NN_m, verbose=True)
         yL = NN(x)
 
         eL = sup_norm(x**2 - yL)
@@ -56,4 +58,17 @@ if comm.rank == 0:
     plt.figure()
     plt.plot(errors, marker='x', linestyle='dashed')
     plt.plot(eY*np.ones_like(errors))
+
+    plt.figure()
+    plt.plot(x, yY, label='Yarotsky')
+    plt.plot(x, yL, label='Learned')
+    plt.legend()
+    
     plt.show()
+
+    # Store
+    not os.path.exists('results') and os.mkdir('results')
+
+    np.savetxt('./results/%s_m%d_errors.txt' % (args.architecture, args.m),
+               np.r_[eY, errors],
+               header='First is Yarotsky, rest is learned.')

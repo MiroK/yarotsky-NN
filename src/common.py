@@ -14,11 +14,11 @@ def predict(sess, NN, x, x_values):
 
 def train(session, get_NN, verbose=True):
     '''Train NN to approx x^2'''
-    x = tf.placeholder(tf.float32, [None, 1])
+    x = tf.placeholder(tf.float64, [None, 1])
     NN, params = get_NN(x)
 
     # y = NN(x)
-    y = tf.placeholder(tf.float32, [None, 1])
+    y = tf.placeholder(tf.float64, [None, 1])
 
     # The loss functional
     loss = tf.reduce_mean(tf.square(NN - y))  # reduce_[sum, mean]
