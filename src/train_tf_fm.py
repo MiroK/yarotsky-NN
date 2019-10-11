@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 from tf_fm_skip_noshare import x2_approx_skip as get_noshare_NN
 from tf_fm_skip_share import x2_approx_skip as get_share_NN
+from common import train, train_minibatch, sup_norm
 from tooth import x2_approx_skip as Yaro
-from common import train, sup_norm
 from functools import partial
 import tensorflow as tf
 import numpy as np
