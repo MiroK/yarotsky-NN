@@ -39,7 +39,7 @@ local_errors = []
 for i in range(nlocal_jobs):
     with tf.Session() as session:
         # Get back the trained net
-        NN = train(session, NN_m, verbose=True)
+        NN, ndofs = train(session, NN_m, verbose=True)
         yL = NN(x)
 
         eL = sup_norm(x**2 - yL)
@@ -71,4 +71,4 @@ if comm.rank == 0:
 
     np.savetxt('./results/%s_m%d_errors.txt' % (args.architecture, args.m),
                np.r_[eY, errors],
-               header='First is Yarotsky, rest is learned.')
+               header='First is Yarotsky, rest is learned. Number of weights %d' % ndofs)

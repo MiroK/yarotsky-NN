@@ -16,6 +16,8 @@ def train(session, get_NN, verbose=True):
     '''Train NN to approx x^2'''
     x = tf.placeholder(tf.float64, [None, 1])
     NN, params = get_NN(x)
+    # Count
+    ndofs = sum(np.prod(var.shape) for var in params.values())
 
     # y = NN(x)
     y = tf.placeholder(tf.float64, [None, 1])
@@ -53,4 +55,4 @@ def train(session, get_NN, verbose=True):
     # Bound
     NN_predict = lambda x0, s=session, x=x, NN=NN: predict(s, NN, x, x0)
 
-    return NN_predict
+    return NN_predict, ndofs
