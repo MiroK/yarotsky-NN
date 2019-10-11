@@ -39,7 +39,7 @@ local_errors = []
 for i in range(nlocal_jobs):
     with tf.Session() as session:
         # Get back the trained net
-        NN, ndofs = train(session, NN_m, verbose=True)
+        NN, ndofs = train(session, args.m, NN_m, verbose=True)
         yL = NN(x)
 
         eL = sup_norm(x**2 - yL)

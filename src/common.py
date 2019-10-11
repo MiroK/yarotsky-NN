@@ -12,8 +12,11 @@ def predict(sess, NN, x, x_values):
     return np.array(y_).flatten()
 
 
-def train(session, get_NN, verbose=True):
-    '''Train NN to approx x^2'''
+def train(session, m, get_NN, verbose=True):
+    '''
+    Train NN to approx x^2. Here we use a **full** gradient in gradient
+    descent, so no minibatch.
+    '''
     x = tf.placeholder(tf.float64, [None, 1])
     NN, params = get_NN(x)
     # Count
@@ -27,9 +30,10 @@ def train(session, get_NN, verbose=True):
     
     learning_rate = 1E-4
     train = tf.train.AdamOptimizer(learning_rate).minimize(loss)
-    
-    training_epochs = 20000
-    batch_size = 750
+
+    # Make training depend on m
+    training_epochs = int(10000*max(1, np.log2(m)))
+    batch_size = min(500, 200*m)
     display_step = 200
 
     # Before starting, initialize the variables
