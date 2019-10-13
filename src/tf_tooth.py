@@ -41,9 +41,13 @@ if __name__ == '__main__':
         sess.run(params['b2'].assign(np.array([0.])))
         
         unit_interval = np.linspace(0, 1, 1000)
-    
+
+        dNN_dx = tf.gradients(NN, x)[0]
+        dx = predict(sess, dNN_dx, x, unit_interval)
+        
         plt.figure()
-        plt.plot(unit_interval, predict(sess, NN, x, unit_interval))            
+        plt.plot(unit_interval, predict(sess, NN, x, unit_interval))
+        plt.plot(unit_interval, dx)
         plt.show()
 
 
