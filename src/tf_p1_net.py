@@ -1,3 +1,4 @@
+from scipy.sparse import diags
 import tensorflow as tf
 import numpy as np
 
@@ -9,19 +10,24 @@ def hat(x, points):
     
     '''
     x0, x1, x2 = points
-
+    # \
+    #  \_______
     if x0 is None:
         assert x1 < x2
         A = np.array([[0.,  -1./(x2-x1)]])
         b = np.array([[0., x2/(x2-x1)]])
         reduce_ = np.array([[1., 1]]).T
         combine_ = np.array([[0.5, 0.5, 0.5]]).T
+    #        /
+    # ______/
     elif x2 is None:
         assert x0 < x1
         A = np.array([[1./(x1-x0),  0]])
         b = np.array([[-x0/(x1-x0), 0]])
         reduce_ = np.array([[1., -1]]).T
         combine_ = np.array([[0.5, 0.5, 0.5]]).T
+    #      /\
+    # ____/ `\____
     else:
         assert x0 < x1 < x2
         A = np.array([[1./(x1-x0),  -1./(x2-x1)]])
@@ -38,7 +44,7 @@ def hat(x, points):
     # Now we want to create abs of rhos since min(a, b) equals
     # (a + b - abs(b-a))/2
     # The first step is abs(x) = rho(x) + rho(-x)
-    #                             rho(b-a) + rho(a-b)
+    #                            rho(b-a) + rho(a-b)
     A = tf.constant(np.array([[1., -1], [-1, 1]]), dtype=tf.float64)
     y2 = tf.nn.relu(tf.matmul(y1, A))
     # Narrow to scalar
@@ -70,6 +76,41 @@ def p1_net(x, mesh, dir_bcs=True):
     # A are the only parameters of the net
     return tf.matmul(y, A), A
 
+
+def mass_matrix(mesh, dir_bcs):
+    '''coef.dot(M.dot(coef)) is the L2 norm^2'''
+    h = np.diff(mesh)
+    left, right = h[:-1], h[1:]
+
+    if dir_bcs:
+        main = left/3. + right/3.
+        off = right[:-1]/6.
+    else:
+        main = np.r_[left[0]/3., left/3. + right/3., right[-1]/3]
+        off = h/6.
+
+    A = diags([off, main, off], [-1, 0, 1])
+
+    return A
+
+
+def stiffness_matrix(mesh, dir_bcs):
+    '''coef.dot(M.dot(coef)) is the H1 semi norm^2'''
+    diff = np.diff(mesh)
+    
+    if dir_bcs:
+        # xi - xi-1
+        # 1/h{i} + 1/h{i+1}
+        main = 1./diff[:-1] + 1./diff[1:]
+        off = -1./diff[1:-1]
+    else:
+        main = np.r_[1./diff[0], 1./diff[:-1] + 1./diff[1:], 1./diff[-1]]
+        off = -1./diff
+
+    A = diags([off, main, off], [-1, 0, 1])
+
+    return A
+        
 # --------------------------------------------------------------------
 
 if __name__ == '__main__':
@@ -80,13 +121,23 @@ if __name__ == '__main__':
     x = tf.placeholder(tf.float64, [None, 1])
 
     mesh = np.linspace(0, 1, 101)
+    # mesh = np.r_[0, np.random.rand(1000), 1]
+    # mesh = np.sort(mesh)
+    #print mesh
+
+    A = mass_matrix(mesh, dir_bcs) # stiffness_matrix(mesh, dir_bcs)
+
+    # f_ = lambda x: x*(x-1)
+    # f_ = lambda x: x*(x-1)+x
+    f_ = lambda x: np.sin(2*np.pi*x)
+
     # Set coefs to interpolant
     if not dir_bcs:
-        A_values = np.array([np.cos(2*np.pi*mesh)]).T
+        A_values = np.array([f_(mesh)]).T
     else:
-        A_values = np.array([np.cos(2*np.pi*mesh[1:-1])]).T
+        A_values = np.array([f_(mesh[1:-1])]).T
         
-    f, A = p1_net(x, mesh, dir_bcs=dir_bcs)
+    f, weights = p1_net(x, mesh, dir_bcs=dir_bcs)
 
     grad_f = tf.gradients(f, x)[0]
     # Before starting, initialize the variables
@@ -96,14 +147,14 @@ if __name__ == '__main__':
     x_mid = 0.5*(x_[:-1] + x_[1:])
     with tf.Session() as sess:
         sess.run(init)
-        sess.run(A.assign(A_values))
+        sess.run(weights.assign(A_values))
         
         y_ = predict(sess, f, x, x_)
 
-        # dy_dx_ = predict(sess, grad_f, x, x_mid)
+        dy_dx_ = predict(sess, grad_f, x, x_mid)
 
     plt.figure()
     plt.plot(x_, y_)
-    # plt.plot(x_mid, dy_dx_)
-    # plt.plot(x_mid, np.cos(2*np.pi*x_mid)*2*np.pi)
+    plt.plot(x_mid, dy_dx_)
+    plt.plot(x_mid, np.cos(2*np.pi*x_mid)*2*np.pi)
     plt.show()
