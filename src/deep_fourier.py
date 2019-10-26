@@ -57,7 +57,7 @@ if __name__ == '__main__':
     from math import pi
     import numpy as np
 
-    m = 4
+    m = 16
     
     x = tf.placeholder(tf.float32, [None, 1])
     # -------------------------------------------------------------------------
@@ -97,7 +97,9 @@ if __name__ == '__main__':
     # NN, params = fourier_series(x, m)
     # NOTE: with hidden layers the interpretation of first layer size 
     # is the number of terms in the series
-    NN = deep_fourier(x, hidden_layer_dims=[m, m/2])
+    # NN, _ = fourier_series(x, m)
+    
+    NN = deep_fourier(x, hidden_layer_dims=[m, m])
     # y = NN(x)
     y = tf.placeholder(tf.float64, [None, 1])
 
@@ -114,7 +116,8 @@ if __name__ == '__main__':
 
     init = tf.global_variables_initializer()
 
-    f = lambda x: np.maximum(x-0.5, 0)  # np.sin(pi*x)
+    # f = lambda x: np.minimum(np.maximum(x-0.25, 0), np.maximum(0.75-x, 0))
+    f = lambda x: np.maximum(x-0.5, 0)
 
     x_data = np.vstack([0, 1, np.random.rand(1000000, 1)])
     y_data = f(x_data)
