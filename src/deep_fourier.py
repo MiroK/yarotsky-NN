@@ -57,7 +57,7 @@ if __name__ == '__main__':
     from math import pi
     import numpy as np
 
-    m = 16
+    m = 32
     
     x = tf.placeholder(tf.float32, [None, 1])
     # -------------------------------------------------------------------------
@@ -110,14 +110,20 @@ if __name__ == '__main__':
     train = tf.train.AdamOptimizer(learning_rate).minimize(loss)
 
     # FIXME: Make training depend on m
-    training_epochs = 10000
+    training_epochs = 10000*(m/4)
     batch_size = 1000
     display_step = 200
 
     init = tf.global_variables_initializer()
 
+    # Hat
     # f = lambda x: np.minimum(np.maximum(x-0.25, 0), np.maximum(0.75-x, 0))
-    f = lambda x: np.maximum(x-0.5, 0)
+    
+    # Ramp
+    # f = lambda x: np.maximum(x-0.5, 0)
+
+    # Step
+    f = lambda x, eps=0.01: np.clip((x-0.5)/eps, 0, 1)
 
     x_data = np.vstack([0, 1, np.random.rand(1000000, 1)])
     y_data = f(x_data)
@@ -141,8 +147,12 @@ if __name__ == '__main__':
     
         x_data = np.array([np.linspace(0, 1, 10000)]).T
         y_data = f(x_data)
+        y_NN = session.run(NN, feed_dict={x: x_data})
 
         plt.figure()
         plt.plot(x_data, y_data)
-        plt.plot(x_data, session.run(NN, feed_dict={x: x_data}))
+        plt.plot(x_data, y_NN)
         plt.show()
+
+    with open('./results/df_%d.txt' % m, 'w') as out:
+        np.savetxt(out, np.c_[x_data, y_data, y_NN])
