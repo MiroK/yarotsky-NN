@@ -75,7 +75,7 @@ if __name__ == '__main__':
     ax_right.legend(*zip(*right), loc='center right')
 
     # Relative to Yarotsky
-        # Absolute
+    # Absolute
     fig, ax = plt.subplots()
 
     ax.set_yscale('log', basey=2)

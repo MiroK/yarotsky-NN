@@ -16,6 +16,8 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 parser.add_argument('-m', type=int, default=1, help='m in f_m approx')
 parser.add_argument('-nnets', type=int, default=10, help='Total of nets to train')
 parser.add_argument('-architecture', type=str, default='share', choices=['share', 'noshare'])
+parser.add_argument('-penalty', type=float, default=0.0)
+parser.add_argument('-points', type=str, default='random', choices=['random', 'dg0'])
 args = parser.parse_args()
 
 # --------------------------------------------------------------------
@@ -39,7 +41,8 @@ local_errors = []
 for i in range(nlocal_jobs):
     with tf.Session() as session:
         # Get back the trained net
-        NN, ndofs = train(session, args.m, NN_m, verbose=True)
+        NN, ndofs = train(session, args.m, NN_m, verbose=True,
+                          points=args.points, penalty=args.penalty)
         yL = NN(x)
 
         eL = sup_norm(x**2 - yL)
@@ -52,7 +55,7 @@ errors = comm.gather(local_errors)
 if comm.rank == 0:
     errors = sum(errors, [])
 
-    print 'Learned Max/Min/Mean', np.max(errors), np.min(errors), np.mean(errors)
+    print 'Learned Max/Min/Mean %s', np.max(errors), np.min(errors), np.mean(errors), args.architecture
     print 'Yarotsky', eY
     
     plt.figure()
@@ -67,8 +70,9 @@ if comm.rank == 0:
     # plt.show()
 
     # Store
-    not os.path.exists('results') and os.mkdir('results')
+    root = 'results_%s_%g' % (args.points, args.penalty)
+    not os.path.exists(root) and os.mkdir(root)
 
-    np.savetxt('./results/%s_m%d_errors.txt' % (args.architecture, args.m),
+    np.savetxt('./%s/%s_m%d_errors.txt' % (root, args.architecture, args.m),
                np.r_[eY, errors],
                header='First is Yarotsky, rest is learned. Number of weights %d' % ndofs)

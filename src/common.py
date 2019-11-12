@@ -12,13 +12,14 @@ def predict(sess, NN, x, x_values):
     return np.array(y_).flatten()
 
 
-def train(session, m, get_NN, verbose=True):
+def train(session, m, get_NN, verbose=True, points='random', penalty=0):
     '''
     Train NN to approx x^2. Here we use a **full** gradient in gradient
     descent, so no minibatch.
     '''
     x = tf.placeholder(tf.float64, [None, 1])
     NN, params = get_NN(x)
+
     # Count
     ndofs = sum(np.prod(var.shape) for var in params.values())
 
@@ -27,6 +28,11 @@ def train(session, m, get_NN, verbose=True):
 
     # The loss functional
     loss = tf.reduce_mean(tf.square(NN - y))  # reduce_[sum, mean]
+    if penalty > 0:
+        print('Regularization')
+        traces = sum(tf.linalg.trace(tf.matmul(tf.linalg.transpose(p), p))
+                     for p in params.values() if p.shape == (3, 3))
+        loss = loss + tf.constant(penalty, shape=[1], dtype=tf.float64)*traces
     
     learning_rate = 1E-3
     train = tf.train.AdamOptimizer(learning_rate).minimize(loss)
@@ -43,7 +49,18 @@ def train(session, m, get_NN, verbose=True):
     # Launch the graph.
     session.run(init)
 
-    x_data = np.vstack([0, 1, np.random.rand(1000000, 1)])
+    if points == 'random':
+        x_data = np.vstack([0, 1, np.random.rand(1000000, 1)])
+    # Points for building best P0 approximation
+    else:
+        assert points == 'dg0'
+        print('Random points')
+        x_data = np.linspace(0, 1, 1000001)
+        x_data = x_data.reshape((-1, 1))
+        x_data = np.sqrt(0.5*(x_data[:-1] + x_data[1:]))
+        # Add bcs
+        x_data = np.row_stack([0, x_data, 1])
+        
     y_data = x_data**2
     idx = np.arange(len(x_data))
     for step in range(training_epochs):

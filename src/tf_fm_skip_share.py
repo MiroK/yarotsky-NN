@@ -61,7 +61,7 @@ if __name__ == '__main__':
     from common import predict
     import numpy as np
 
-    m = 1
+    m = 6
     
     x = tf.placeholder(tf.float64, [None, 1])
     NN, params = x2_approx_skip(x, m=m)
