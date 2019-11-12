@@ -9,9 +9,9 @@ do
     do
         for penalty in 0 1E-1 1E-2 1E-4 1E-6
         do
-            for m in 2
+            for m in 2 4 6 8 10
             do
-                mpirun -np $NPROCS python train_tf_fm_P0pts.py -m $m -architecture $arch -points $points -penalty $penalty -nnets $NNETS
+                mpirun -np $NPROCS python train_tf_fm_P0pts.py -m $m -architecture $arch -points $points -penalty $penalty -nnets $NNETS;
             done
         done
     done
