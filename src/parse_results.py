@@ -39,6 +39,8 @@ if __name__ == '__main__':
     # Absolute
     fig, ax = plt.subplots()
     ax_right = ax.twinx()
+
+    plt.title(args.root)
     
     ax.set_yscale('log', basey=2)
     ax.set_xlabel('$m$')
@@ -51,10 +53,9 @@ if __name__ == '__main__':
         # Get all candidates
         data_set = glob.glob(os.path.join(args.root, '%s_*' % arch))
         assert data_set
-
-        ms = map(int, [number.findall(d)[0] for d in data_set])
+        ms = map(int, [number.findall(d)[-1] for d in data_set])
         ms, data_set = zip(*sorted(zip(ms, data_set), key=lambda p: p[0]))
-    
+        print ms
         data = [extract_data(d) for d in data_set]
         eYs, mins, maxs, means, stds, dofss = np.array(data).T
 
@@ -65,7 +66,8 @@ if __name__ == '__main__':
         l = ax.plot(ms, mins, marker='o', color=color)[0]
         left.append((l, '%s:min(Learned)' % arch))
         
-        l = ax.errorbar(ms, means, yerr=stds, marker='d', color=color)[0]
+        # l = ax.errorbar(ms, means, yerr=stds, marker='d', color=color)[0]
+        l,  = ax.plot(ms, means, marker='d', color=color)
         left.append((l, '%s:mean(Learned)' % arch))
 
         l = ax_right.plot(ms, dofss, marker='s', color=color, linestyle='dashed')[0]
@@ -74,33 +76,34 @@ if __name__ == '__main__':
     ax.legend(*zip(*left), loc='center left')
     ax_right.legend(*zip(*right), loc='center right')
 
-    # Relative to Yarotsky
-    # Absolute
-    fig, ax = plt.subplots()
+    fig.savefig('%s.pdf' % args.root, dpi=300, bbox_inches='tight')
+    # # Relative to Yarotsky
+    # # Absolute
+    # fig, ax = plt.subplots()
 
-    ax.set_yscale('log', basey=2)
-    ax.set_xlabel('$m$')
-    ax.set_ylabel('$error(Learned_m)/error(Yarotsky_m)$')
+    # ax.set_yscale('log', basey=2)
+    # ax.set_xlabel('$m$')
+    # ax.set_ylabel('$error(Learned_m)/error(Yarotsky_m)$')
     
-    ax_right.set_ylabel('dofs(f_m)')
-    left = []
-    for color, arch in zip(colors, archs):
-        # Get all candidates
-        data_set = glob.glob(os.path.join(args.root, '%s_*' % arch))
-        assert data_set
+    # ax_right.set_ylabel('dofs(f_m)')
+    # left = []
+    # for color, arch in zip(colors, archs):
+    #     # Get all candidates
+    #     data_set = glob.glob(os.path.join(args.root, '%s_*' % arch))
+    #     assert data_set
 
-        ms = map(int, [number.findall(d)[0] for d in data_set])
-        ms, data_set = zip(*sorted(zip(ms, data_set), key=lambda p: p[0]))
+    #     ms = map(int, [number.findall(d)[-1] for d in data_set])
+    #     ms, data_set = zip(*sorted(zip(ms, data_set), key=lambda p: p[0]))
     
-        data = [extract_data(d) for d in data_set]
-        eYs, mins, maxs, means, stds, dofss = np.array(data).T
+    #     data = [extract_data(d) for d in data_set]
+    #     eYs, mins, maxs, means, stds, dofss = np.array(data).T
 
-        l = ax.plot(ms, mins/eYs, marker='o', color=color)[0]
-        left.append((l, '%s:min' % arch))
+    #     l = ax.plot(ms, mins/eYs, marker='o', color=color)[0]
+    #     left.append((l, '%s:min' % arch))
         
-        l = ax.plot(ms, means/eYs, marker='d', color=color)[0]
-        left.append((l, '%s:mean' % arch))
+    #     l = ax.plot(ms, means/eYs, marker='d', color=color)[0]
+    #     left.append((l, '%s:mean' % arch))
 
-    ax.legend(*zip(*left), loc='lower right')
+    # ax.legend(*zip(*left), loc='lower right')
 
     plt.show()
