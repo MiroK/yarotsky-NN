@@ -8,7 +8,7 @@ def relu(x):
 
 def tooth(x):
     '''On [0, 1]'''
-    return 2*relu(x) - 4*relu(x-0.5) + 2*relu(x-1)
+    return 2*relu(x) - 4*relu(x-0.5)# + 2*relu(x-1)
 
 
 def sawtooth(x, s):
@@ -36,12 +36,10 @@ if __name__ == '__main__':
     x = np.linspace(0, 1, 300)
 
 
-    plt.figure()
-    plt.plot(x, x**2-x2_approx(x, 7))
-    plt.show()
+    #plt.figure()
+    #plt.plot(x, x**2-x2_approx(x, 7))
+    #plt.show()
 
-
-    exit()
     y0 = x**2
     
     # Error-ish

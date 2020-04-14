@@ -15,14 +15,14 @@ def tooth(x):
     
     # x is a scalar
     # Inputs to first layer are
-    A1 = np.array([[1, 1, 1]]).T
-    b1 = np.array([[0, -0.5, -1]]).T
+    A1 = np.array([[1, 1]]).T
+    b1 = np.array([[0, -0.5]]).T
     y1 = A1.dot(x) + b1
 
     y1 = relu(y1)
     
     # Inputs to second layer
-    A2 = np.array([[2, -4, 2]])
+    A2 = np.array([[2, -4]])
     b2 = np.array([[0]])
 
     return A2.dot(y1) + b2
@@ -65,15 +65,14 @@ def saw_tooth(x, s):
 
     # x is a scalar
     # Inputs to first layer are
-    A1 = np.array([[1, 1, 1]]).T
-    b1 = np.array([[0, -0.5, -1]]).T
+    A1 = np.array([[1, 1]]).T
+    b1 = np.array([[0, -0.5]]).T
     y1 = A1.dot(x) + b1
 
     y1 = relu(y1)
-    A = np.array([[2, -4, 2],
-                  [2, -4, 2],
-                  [2, -4, 2]])
-    b = np.array([[0, -0.5, -1]]).T
+    A = np.array([[2, -4],
+                  [2, -4]])
+    b = np.array([[0, -0.5]]).T
 
     while s > 1:
         y1 = A.dot(y1) + b
@@ -82,7 +81,7 @@ def saw_tooth(x, s):
         s -= 1
         
     # Inputs to second layer
-    A2 = np.array([[2, -4, 2]])
+    A2 = np.array([[2, -4]])
     b2 = np.array([[0]])
 
     return A2.dot(y1) + b2
@@ -96,19 +95,18 @@ def x2_approx_skip(x, m):
         return np.array([x2_approx_skip(xi, m) for xi in x]).flatten()
 
     # Composition
-    Ac = np.array([[2, -4, 2],
-                   [2, -4, 2],
-                   [2, -4, 2]])
-    bc = np.array([[0, -0.5, -1]]).T
+    Ac = np.array([[2, -4],
+                   [2, -4]])
+    bc = np.array([[0, -0.5]]).T
 
     # Narrowing for finalizing gs
-    Ag = np.array([[2, -4, 2]])
+    Ag = np.array([[2, -4]])
     bg = np.array([[0]])
 
     # x is a scalar
     # The initial layer consist of id(x) and g(x)
-    A1 = np.array([[1, 1, 1]]).T
-    b1 = np.array([[0, -0.5, -1]]).T
+    A1 = np.array([[1, 1]]).T
+    b1 = np.array([[0, -0.5]]).T
     y1 = A1.dot(x) + b1
     y1 = relu(y1)
 

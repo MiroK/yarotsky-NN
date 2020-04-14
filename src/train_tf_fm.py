@@ -13,8 +13,8 @@ import argparse, os
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Which (template) preconitioner to use
-parser.add_argument('-m', type=int, default=1, help='m in f_m approx')
-parser.add_argument('-nnets', type=int, default=10, help='Total of nets to train')
+parser.add_argument('-m', type=int, default=3, help='m in f_m approx')
+parser.add_argument('-nnets', type=int, default=1, help='Total of nets to train')
 parser.add_argument('-architecture', type=str, default='share', choices=['share', 'noshare'])
 args = parser.parse_args()
 
@@ -64,7 +64,7 @@ if comm.rank == 0:
     plt.plot(x, yL, label='Learned')
     plt.legend()
     
-    # plt.show()
+    plt.show()
 
     # Store
     not os.path.exists('results') and os.mkdir('results')

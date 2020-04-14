@@ -8,8 +8,8 @@ def sup_norm(x):
 
 def predict(sess, NN, x, x_values):
     '''eval NN(x) in this session using x_values'''
-    y_ = [sess.run(NN, feed_dict={x: np.array([[xi]])}) for xi in x_values]
-    return np.array(y_).flatten()
+    y_ = sess.run(NN, feed_dict={x: x_values.reshape((-1, 1))})
+    return y_
 
 
 def train(session, m, get_NN, verbose=True, points='random', penalty=0):
@@ -26,12 +26,18 @@ def train(session, m, get_NN, verbose=True, points='random', penalty=0):
     # y = NN(x)
     y = tf.placeholder(tf.float64, [None, 1])
 
+
+    interval = np.linspace(0, 1, 1000).reshape((-1, 1))
+    
+    grad_f = tf.gradients(NN, x)[0]
+
     # The loss functional
-    loss = tf.reduce_mean(tf.square(NN - y))  # reduce_[sum, mean]
+    loss = tf.reduce_mean(tf.square(NN - y))# + 1E-4*tf.reduce_sum(tf.square(grad_f*grad_f - 2*NN))  # reduce_[sum, mean]
     if penalty > 0:
         print('Regularization')
         traces = sum(tf.linalg.trace(tf.matmul(tf.linalg.transpose(p), p))
                      for p in params.values() if p.shape == (3, 3))
+
         loss = loss + tf.constant(penalty, shape=[1], dtype=tf.float64)*traces
     
     learning_rate = 1E-3
