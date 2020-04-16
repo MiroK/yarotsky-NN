@@ -5,6 +5,7 @@ import sympy as sp
 from dolfin import *
 import dolfin as df
 import itertools
+from scipy.signal import find_peaks
 
 
 def relu(x):
@@ -126,24 +127,27 @@ public:
     return Expression(code, degree=5)
 
 
-def get_level(level, basis, degree=5):
+def get_level(level, basis, degree=5, H10=False):
     '''Compositions of level length of the basis functions'''
+    is_okay = lambda f, H10=H10: not H10 or (abs(f(-1)) < 1E-10 and abs(f(1)) < 1E-10)
+    
     numbs = list(range(len(basis)))
     for composition in itertools.product(*[numbs]*level):
-        yield get_composed(composition, basis, degree=degree)
+        f = get_composed(composition, basis, degree=degree)
+        if is_okay(f):
+            yield f
 
-
-def get_all_levels(max_level, basis, degree=5):
+def get_all_levels(max_level, basis, degree=5, H10=False):
     '''Up to'''
-    for f in itertools.chain(*[get_level(l, basis, degree) for l in range(1, max_level+1)]):
+    for f in itertools.chain(*[get_level(l, basis, degree, H10) for l in range(1, max_level+1)]):
         yield f
 
 
-def get_perlevel(counts, basis, degree=5):
+def get_perlevel(counts, basis, degree=5, H10=False):
     '''From the complete hierarchy len(counts) use counts[i] functions per level'''
     all_basis, all_indices = [], []
     for level, count in enumerate(counts, 1):
-        foos = list(get_level(level, basis, degree))
+        foos = list(get_level(level, basis, degree, H10))
         # Entire level
         if count == -1:
             all_basis.extend(foos)
@@ -206,7 +210,7 @@ if __name__ == '__main__':
     if False:
         x = np.linspace(-1, 1, 10001)
         
-        m = 3
+        m = 4
 
         hierarchy = eval_hierarchy(depth=m, basis=(odd_tooth, even_tooth), x=x)
         basis_names = ('O', 'E')
@@ -264,15 +268,43 @@ if __name__ == '__main__':
         plt.figure()
         plt.plot(x, y)
 
+    if False:
+        nlevels = 5
+
+        x = sp.Symbol('x')
+        basis = [odd_tooth_sympy(x), even_tooth_sympy(x)]
+        names_ = ('O', 'E')
+
+        assert len(basis) == len(names_)
+        
+        hierarchy = [list(get_level(k, basis=basis, H10=True)) for k in range(1, nlevels+1)]
+
+        x = np.linspace(-1, 1, 10000)
+        level_names = [list(names_)]
+        for level in hierarchy:
+            print(len(level))
+            fig, axarr = plt.subplots(len(level)/2, 2, sharex=True, sharey=True)
+            axarr = axarr if len(axarr.shape) == 1 else itertools.chain(*axarr)
+
+            names = level_names.pop()
+
+            for ax, f, name in zip(axarr, level, names):
+                ax.plot(x, map(f, x))
+                ax.set_title(name)
+
+            level_names.append([' o '.join([f, prev]) for prev in names for f in names_])
+
+
     # Finally the fun part - using the basis
-    if True:
-        nlevels = 2
+    if False:
+        nlevels = 3
 
         x = sp.Symbol('x')
         basis = [odd_tooth_sympy(x), even_tooth_sympy(x)]
         names_ = 'OE'
 
         all_basis = list(get_all_levels(nlevels, basis=basis))
+
         # Integration mesh
         mesh = IntervalMesh(200000, -1, 1)
         # Solve Poisson problem
@@ -297,15 +329,11 @@ if __name__ == '__main__':
         for name, value in zip(names[idx], ch[idx]):
             print('\t', ''.join(name), value)
                 
-        # As function (for plotting and what not)
-        Vh = FunctionSpace(mesh, 'CG', 1)
-
-        uh = project(uh, Vh)
         error = (errornorm(u, uh, 'H10'),
                  errornorm(u, uh, 'L2'))
 
         # Plot
-        xh = Vh.tabulate_dof_coordinates().reshape((-1, ))
+        xh = mesh.coordinates().flatten()
         uh = uh.vector().get_local()
         # Order dofs according to growing x
         idx = np.argsort(xh)
@@ -319,10 +347,10 @@ if __name__ == '__main__':
 
 
     # Per level
-    if False:
+    if True:
         x = sp.Symbol('x')
         basis = [odd_tooth_sympy(x), even_tooth_sympy(x)]
-        all_basis, all_indices = get_perlevel((-1, -1, -1), basis=basis, degree=5)
+        all_basis, all_indices = get_perlevel((-1, -1, -1), basis=basis, degree=5, H10=True)
 
         names = []
         for l, idx in enumerate(all_indices, 1):
@@ -346,13 +374,10 @@ if __name__ == '__main__':
         for name, value in zip(names[idx], ch[idx]):
             print('\t', ''.join(name), value)
 
-        # As function (for plotting and what not)
-        Vh = FunctionSpace(mesh, 'CG', 3)
-        uh = project(uh, Vh)
         error = errornorm(u, uh, 'H10')
 
         # Plot
-        xh = Vh.tabulate_dof_coordinates().reshape((-1, ))
+        xh = mesh.coordinates().flatten()
         uh = uh.vector().get_local()
         # Order dofs according to growing x
         idx = np.argsort(xh)
@@ -362,9 +387,6 @@ if __name__ == '__main__':
 
         plt.figure()
         plt.plot(xh, uh)
-        plt.plot(xh, map(u, xh))
+        # plt.plot(xh, map(u, xh))
         
-    # Add AMG results
-
-
     plt.show()
