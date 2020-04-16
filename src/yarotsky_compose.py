@@ -1,8 +1,9 @@
 # Yarotsky on [-1, 1]
-
+from __future__ import print_function
 import numpy as np
 import sympy as sp
 from dolfin import *
+import dolfin as df
 import itertools
 
 
@@ -140,26 +141,31 @@ def get_all_levels(max_level, basis, degree=5):
 
 def get_perlevel(counts, basis, degree=5):
     '''From the complete hierarchy len(counts) use counts[i] functions per level'''
-    all_basis = []
+    all_basis, all_indices = [], []
     for level, count in enumerate(counts, 1):
         foos = list(get_level(level, basis, degree))
         # Entire level
         if count == -1:
             all_basis.extend(foos)
+            all_indices.append(list(range(len(foos))))
         # Pick
         else:
+            indices = []
             while count > 0:
                 idx = np.random.randint(0, len(foos))
                 all_basis.append(foos.pop(idx))
-                count -= 1
+                indices.append(idx)
 
-    return all_basis 
+                count -= 1
+            all_indices.append(indices)
+                
+    return all_basis, all_indices
 
 
 def solve_poisson_galerkin(basis_expr, mesh, f):
     '''Solve -Delta u = f with Galerking method using basis of basis_expr'''
     # Get basis foos as FEM mesh foos
-    S = FunctionSpace(mesh, 'CG', 10)
+    S = FunctionSpace(mesh, 'CG', 1)
     # So that we can compute their gradient
     basis = [interpolate(b, S) for b in basis_expr]
     
@@ -177,13 +183,19 @@ def solve_poisson_galerkin(basis_expr, mesh, f):
 
     A_ = A.array()
     print('System conditioning', np.linalg.cond(A_))
+    print('Is diagonal', np.linalg.norm(A_ - np.diag(np.diagonal(A_)), np.inf))
     
     ch = Function(V)
     solve(A, ch.vector(), b)
 
-    wh = sum(chi*fi for whi, fi in zip(ch, basis))
+    ch = ch.vector().get_local()
+    # Build explicitvely the linear combination
+    # sum(chi*fi for chi, fi in zip(chs, basis))
+    uh = Function(S)
+    for chi, fi in zip(ch, basis):
+        uh.vector().axpy(chi, fi.vector())
     
-    return ch.vector().get_local(), wh
+    return ch, uh
         
 # --------------------------------------------------------------------
 
@@ -193,7 +205,7 @@ if __name__ == '__main__':
     # Plot functions for each level
     if False:
         x = np.linspace(-1, 1, 10001)
-
+        
         m = 3
 
         hierarchy = eval_hierarchy(depth=m, basis=(odd_tooth, even_tooth), x=x)
@@ -253,22 +265,87 @@ if __name__ == '__main__':
         plt.plot(x, y)
 
     # Finally the fun part - using the basis
-    if False:
-        nlevels = 5
+    if True:
+        nlevels = 2
 
         x = sp.Symbol('x')
         basis = [odd_tooth_sympy(x), even_tooth_sympy(x)]
+        names_ = 'OE'
+
         all_basis = list(get_all_levels(nlevels, basis=basis))
         # Integration mesh
         mesh = IntervalMesh(200000, -1, 1)
         # Solve Poisson problem
         k = 1
 
-        f = Expression('(k*pi)*(k*pi)*sin(k*pi*x[0])', degree=5, k=k)
-        u = Expression('sin(k*pi*x[0])', degree=5, k=k)
+        f = Expression('(k*pi)*(k*pi)*sin(k*pi*x[0])', degree=10, k=k)
+        u = Expression('sin(k*pi*x[0])', degree=10, k=k)
 
         # Solution as expression
-        ch, uh = solve_poisson_galerkin(all_basis, mesh, f)    
+        ch, uh = solve_poisson_galerkin(all_basis, mesh, f)
+
+        assert len(names_) == len(basis)
+        
+        names = []
+        for l in range(1, nlevels+1):
+            names.extend(list(itertools.product(*[names_]*l)))
+        names = np.array(names)
+        
+        # Sort coefs
+        idx = np.argsort(ch)[::-1]
+        print('Solution coefs')
+        for name, value in zip(names[idx], ch[idx]):
+            print('\t', ''.join(name), value)
+                
+        # As function (for plotting and what not)
+        Vh = FunctionSpace(mesh, 'CG', 1)
+
+        uh = project(uh, Vh)
+        error = (errornorm(u, uh, 'H10'),
+                 errornorm(u, uh, 'L2'))
+
+        # Plot
+        xh = Vh.tabulate_dof_coordinates().reshape((-1, ))
+        uh = uh.vector().get_local()
+        # Order dofs according to growing x
+        idx = np.argsort(xh)
+        xh, uh = xh[idx], uh[idx]
+
+        print('Error with %d basis functions' % len(all_basis), error)
+
+        plt.figure()
+        plt.plot(xh, uh)
+        plt.plot(xh, map(u, xh))
+
+
+    # Per level
+    if False:
+        x = sp.Symbol('x')
+        basis = [odd_tooth_sympy(x), even_tooth_sympy(x)]
+        all_basis, all_indices = get_perlevel((-1, -1, -1), basis=basis, degree=5)
+
+        names = []
+        for l, idx in enumerate(all_indices, 1):
+            names.extend(np.array(list(itertools.product(*['OE']*l)))[idx])
+        names = np.array(names)
+
+        # Integration mesh
+        mesh = IntervalMesh(200000, -1, 1)
+        # Solve Poisson problem
+        k = 0.5
+
+        f = Expression('(k*pi)*(k*pi)*cos(k*pi*x[0])', degree=5, k=k)
+        u = Expression('cos(k*pi*x[0])', degree=5, k=k)
+
+        # Solution as expression
+        ch, uh = solve_poisson_galerkin(all_basis, mesh, f)
+
+        # Sort coefs
+        idx = np.argsort(ch)[::-1]
+        print('Solution coefs')
+        for name, value in zip(names[idx], ch[idx]):
+            print('\t', ''.join(name), value)
+
         # As function (for plotting and what not)
         Vh = FunctionSpace(mesh, 'CG', 3)
         uh = project(uh, Vh)
@@ -286,41 +363,7 @@ if __name__ == '__main__':
         plt.figure()
         plt.plot(xh, uh)
         plt.plot(xh, map(u, xh))
-
-
-    # Per level
-    x = sp.Symbol('x')
-    basis = [odd_tooth_sympy(x), even_tooth_sympy(x)]
-    all_basis = get_perlevel((-1, -1, -1), basis=basis, degree=5)
-    # Integration mesh
-    mesh = IntervalMesh(200000, -1, 1)
-    # Solve Poisson problem
-    k = 1
-    
-    f = Expression('(k*pi)*(k*pi)*sin(k*pi*x[0])', degree=5, k=k)
-    u = Expression('sin(k*pi*x[0])', degree=5, k=k)
-    
-    # Solution as expression
-    uh = solve_poisson_galerkin(all_basis, mesh, f)    
-    # As function (for plotting and what not)
-    Vh = FunctionSpace(mesh, 'CG', 3)
-    ch, uh = project(uh, Vh)
-    error = errornorm(u, uh, 'H10')
-    
-    # Plot
-    xh = Vh.tabulate_dof_coordinates().reshape((-1, ))
-    uh = uh.vector().get_local()
-    # Order dofs according to growing x
-    idx = np.argsort(xh)
-    xh, uh = xh[idx], uh[idx]
-
-    print('Error with %d basis functions %g' % (len(all_basis), error))
-    
-    plt.figure()
-    plt.plot(xh, uh)
-    plt.plot(xh, map(u, xh))
-
-    
+        
     # Add AMG results
 
 
