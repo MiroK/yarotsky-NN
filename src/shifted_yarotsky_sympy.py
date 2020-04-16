@@ -105,17 +105,16 @@ def solve_poisson_hat(mesh, shift, nlevels, f):
     # Get basis foos as FEM mesh foos
     S = FunctionSpace(mesh, 'CG', 10)
     # So that we can compute their gradient
-    dbasis = [grad(interpolate(b, S)) for b in basis]
+    basis = [interpolate(b, S) for b in basis]
     
     # Build approximation space
     V = VectorFunctionSpace(mesh, 'R', 0, len(basis))
     u, v = TrialFunction(V), TestFunction(V)
     
-    gu = sum(ui*fi for ui, fi in zip(u, dbasis))
-    gv = sum(vi*fi for vi, fi in zip(v, dbasis))
+    u = sum(ui*fi for ui, fi in zip(u, basis))
     v = sum(vi*fi for vi, fi in zip(v, basis))
 
-    a = inner(gu, gv)*dx
+    a = inner(grad(u), grad(v))*dx
     L = inner(f, v)*dx
 
     A, b = map(assemble, (a, L))
@@ -168,13 +167,8 @@ if __name__ == '__main__':
     levels = np.arange(4, 10)
     shift = 0.5
 
-    u = Expression('x[0]*x[0]*(1-x[0])*(1-x[0])', degree=8)
-
     foo = yarotsky0  # shift 0.5 okay for x*(1-x)
     foo = yarotsky0  # shift 0.5 okay for x**2
-    foo = partial(yarotsky0,
-                  f=Expression(' x[0]*x[0]*(2*x[0] - 2) + 2*x[0]*(-x[0] + 1)*(-x[0] + 1)', degree=4),
-                  u=u)
     
     cond = []
     for nlevels in levels:
