@@ -13,3 +13,7 @@
 *.out
 *.pdf
 *.thm
+
+*.png
+
+jit*/
